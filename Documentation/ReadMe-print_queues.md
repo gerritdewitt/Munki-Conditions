@@ -3,7 +3,8 @@ Print Queues Condition (_print-queues.py_)
 *Purpose:* This condition script reads metadata from Munki manifest files (cached as of the previous Munki check-in), looking for custom dictionaries describing print queues added to the *_metadata* key in each.  It adds the defined print queues if necessary; otherwise, it simply maintains their CUPS attributes.  After it finishes, it writes a single array of dictionaries to the conditions file:
 * _managed_print_queues_: Array of Dictionaries.  This is a union of any unique dictionaries found in the *_metadata:print_queues* array in each cached manifest.  It also includes result and timestamp keys indicating if adding/modifying the queues was successful and when the event happened.
 
-*Available For:*
+*Requirements:*
+In addition to the Munki Conditions being deployed...
  * At least one print queue defined in the metadata of at least one manifest.
  * The computer must have the correct printer driver software installed.  Specifically, the PPD file must exist at the specified path on each client.  Typically, this can be accomplished by adding the printer driver software as a managed install to the same group manifest.
 
