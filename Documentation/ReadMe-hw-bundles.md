@@ -5,8 +5,6 @@ Hardware Bundles Condition (_hw-bundle.py_)
 * _system_manufacture_date_: Date.  Approximate date of manufacture determined by decoding the serial number.
 The Munki Conditions file provides additional variables that can be referenced by manifests to determine if an item should be offered for installation.
 
-*Available For:* Any group including the _includes/conditions_ manifest.
-
 *How it Works:*  This script reads the client's hardware serial number, determining a date of manufacture using a method others have discovered and disclosed<sup>3</sup>.  If the date of manufacture is on or after October 23, 2013, then it considers the computer eligible for the current iLife/iWork hardware bundle.
 
 Conditional Manifest Example
