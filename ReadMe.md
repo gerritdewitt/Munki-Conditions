@@ -2,7 +2,7 @@ About this Repository
 ----------
 This repository contains materials for creating an Apple Installer package for deploying Munki conditional scripts.  The package's root is _package-root_ within this tree.
 
-The condition scripts are menat to be deployed to client systems.  Inside _package-root_, you'll see that they are deployed to _usr/local/munki/conditions_, so munki will execute them on each check-in.<sup>1,2</sup>.
+The condition scripts are meant to be deployed to client systems.  Inside _package-root_, you'll see that they are deployed to _usr/local/munki/conditions_, so munki will execute them on each check-in.<sup>1,2</sup>.
 
 About Conditions
 ----------
