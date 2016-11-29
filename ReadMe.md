@@ -15,8 +15,8 @@ Conditions involve two components:
 Creating the Condition Scripts Package
 ----------
 * Edit the conditional scripts to meet your needs.  For example, these conditions have some global variables that will be specific to your enterprise:
-** ''ad-test.py''
-** ''admin-groups.py''
+      - **ad-test.py**
+      - **admin-groups.py**
 * To build the installer package, simply run the _make-installer-pkg.sh_ script.  The script is interactive; it will produce an Apple Installer package.
 
 Deploying the Condition Scripts with Munki
