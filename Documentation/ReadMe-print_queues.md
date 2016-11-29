@@ -1,7 +1,7 @@
 Print Queues Condition (_print-queues.py_)
 ----------
 *Purpose:* This condition script reads metadata from Munki manifest files (cached as of the previous Munki check-in), looking for custom dictionaries describing print queues added to the *_metadata* key in each.  It adds the defined print queues if necessary; otherwise, it simply maintains their CUPS attributes.  After it finishes, it writes a single array of dictionaries to the conditions file:
-* _managed_print_queues_: Array of Dictionaries.  This is a union of any unique dictionaries found in the *_metadata_:_print_queues* array in each cached manifest.  It also includes result and timestamp keys indicating if adding/modifying the queues was successful and when the event happened.
+* _managed_print_queues_: Array of Dictionaries.  This is a union of any unique dictionaries found in the *_metadata:print_queues* array in each cached manifest.  It also includes result and timestamp keys indicating if adding/modifying the queues was successful and when the event happened.
 
 *Available For:*
  * At least one print queue defined in the metadata of at least one manifest.
