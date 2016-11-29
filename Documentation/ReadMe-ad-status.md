@@ -11,8 +11,6 @@ Active Directory Status Condition (_ad-status.py_)
 
 It should be obvious that _ad_dns_srv_found_ is a necessary condition.  If DNS-SRV records are not found, we assume the system is off network and we skip other AD tests.
 
-*Available For:* Any group including the _includes/conditions_ manifest.
-
 *How it Works:*  This script performs a series of tests to determine if the computer on which it runs should be bound to AD.  Lookup of DNS-SRV records is accomplished with _dig_, test user ID lookup is performed using the _pwd_ Python module, and _dsconfigad_ is called to read AD binding defaults.
 
 Relationship with AD Config Profile
