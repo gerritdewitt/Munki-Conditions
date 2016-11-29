@@ -2,19 +2,15 @@ Admin Groups Condition (_admin-groups.py_)
 ----------
 *Purpose:* This condition script serves two purposes:
    1. It reports a list of GUIDs for groups nested in the local admin group.
-   2. It reads metadata from Munki manifest files (cached as of the previous Munki check-in), looking for a list of group names from a central directory domain that should be nested in the local admin group.  If a __metadata:nested_admin_groups_ key with valid information exists in one or more Munki manifests applicable to the computer:
+   2. It reads metadata from Munki manifest files (cached as of the previous Munki check-in), looking for a list of group names from a central directory domain that should be nested in the local admin group.  If a *_metadata:nested_admin_groups* key with valid information exists in one or more Munki manifests applicable to the computer:
       * Groups specified via the manifest(s) are added to the local admin group (if not already members), and
-      * Groups specified in AD binding (dsconfigad) settings are added to the local admin group** (if not already members), and
+         - (This setting is configurable.  See Expected Input Data for details.)
       * Any other nested groups in the local admin group not in either list are removed.
-      
-** This setting is configurable.  See Expected Input Data for details.
  
  After it finishes, it writes the following to the conditions file:
 * _admin_groups_success_: Boolean. If _false_, indicates the conditional script encountered a problem.
 * _nested_admin_group_guids_: Array of GUID strings.  This information is measured using _dscl_; e.g.:
 <pre>dscl /Local/Default read Groups/admin NestedGroups</pre>
-
-*Available For:* Any group including the _includes/conditions_ manifest.
 
 Expected Input Data
 ----------
