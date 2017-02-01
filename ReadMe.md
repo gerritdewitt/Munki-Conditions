@@ -14,9 +14,11 @@ Conditions involve two components:
 
 Creating the Condition Scripts Package
 ----------
-* Edit the conditional scripts to meet your needs.  For example, these conditions have some global variables that will be specific to your enterprise:
-      - **ad-test.py**
-      - **admin-groups.py**
+* Edit the conditional scripts to meet your needs.
+* **ad-status.py**: Make sure to edit and specify:
+   - the names of your forest (AD_FOREST) and domain (AD_DOMAIN)
+   - the identifiers of any configuration profiles that should be removed if unbinding:  (This condition will unbind systems if it determines they are on the network but not properly communicating with AD so your automation for re-binding can key off of its output.) Typically, these are profiles that would be re-installed when re-bound.  For example, if you bind to AD with a configuration profile, that profile would need to be removed prior to rebinding.  Also any profiles with AD Certificate payloads should be removed so they may be reinstalled; for example, you might have a Wi-Fi payload for EAP-TLS that carries an AD Certificate payload. 
+- **admin-groups.py**: Edit and specify the DIRECTORY_SEARCH_NODE path so that GUIDs for various groups to be nested can be determined by searching that directory node.
 * To build the installer package, simply run the _make-installer-pkg.sh_ script.  The script is interactive; it will produce an Apple Installer package.
 
 Deploying the Condition Scripts with Munki
@@ -26,12 +28,12 @@ To deploy the conditions, add the resulting installer package to the Munki repos
 For example:
 <pre>
 # Copy to repo:
-sudo cp GSU_Munki_Conditions-2016.06.pkg /mounts/munki-repo/pkgs/
+sudo cp Munki_Conditions-2017.01.pkg /mounts/munki-repo/pkgs/
 # Generate pkginfo:
 sudo -s
-makepkginfo --unattended_install --name GSU_Munki_Conditions --displayname="GSU Munki Conditions" \
---pkgvers=2016.06 --catalog=configuration --developer="GSU" --category="Misc" \
-/mounts/munki-repo/pkgs/GSU_Munki_Conditions-2016.06.pkg > /mounts/munki-repo/pkgsinfo/GSU_Munki_Conditions-2016.06
+makepkginfo --unattended_install --name Munki_Conditions --displayname="Munki Conditions" \
+--pkgvers=2017.01 --catalog=configuration --developer="GSU" --category="Misc" \
+/mounts/munki-repo/pkgs/Munki_Conditions-2017.01.pkg > /mounts/munki-repo/pkgsinfo/Munki_Conditions-2017.01
 exit
 # Update catalogs:
 sudo makecatalogs

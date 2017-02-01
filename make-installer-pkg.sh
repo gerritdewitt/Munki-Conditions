@@ -19,12 +19,15 @@ declare -i CLEANUP_WHEN_DONE=0
 
 # Variables for package:
 declare -x THIS_DIR=$(dirname "$0")
-declare -x PACKAGE_IDENTIFIER="org.sample.munki.conditions" # edit to suit your organization
+declare -x PACKAGE_IDENTIFIER="edu.gsu.munki.conditions"
 declare -x PACKAGE_ROOT_DIR="$THIS_DIR/package-root"
+#declare -x PACKAGE_SCRIPTS_DIR="$THIS_DIR/mec-package-scripts"
 
 # MARK: build_package()
 # Builds the component pkg.
 function build_package(){
+    # Set permisions on package scripts dir:
+    #chmod -R 0755 "$PACKAGE_SCRIPTS_DIR" && echo "Set permissions on package scripts directory."
     # Set permisions on package root:
     chmod -R 0750 "$PACKAGE_ROOT_DIR" && echo "Set permissions on package root."
     # Remove ._ files from package root:
@@ -50,6 +53,6 @@ function pre_cleanup(){
 # MARK: main()
 echo "Enter a version number (for example YYYY.MM like 2016.07):"
 read PACKAGE_VERSION
-declare -x PACKAGE_PATH="$THIS_DIR/YOUR_ORG_Munki_Conditions-$PACKAGE_VERSION.pkg" # edit to suit your needs
+declare -x PACKAGE_PATH="$THIS_DIR/Munki_Conditions-$PACKAGE_VERSION.pkg"
 pre_cleanup
 build_package
