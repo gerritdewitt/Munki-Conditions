@@ -1,15 +1,16 @@
 Hardware Bundles Condition (_hw-bundle.py_)
 ----------
 *Purpose:* Adds the following keys to the Munki Conditions file:
-* _system_hw_bundle_oct_2013_: Boolean.  Indicates whether the system is eligible for current versions of iMovie, GarageBand, Pages, Numbers, and Keynote by virtue of having a hardware bundle license.
-* _system_manufacture_date_: Date.  Approximate date of manufacture determined by decoding the serial number.
-The Munki Conditions file provides additional variables that can be referenced by manifests to determine if an item should be offered for installation.
+* **system_manufacture_date**: Date.  Approximate date of manufacture determined by decoding the serial number.
+* **system_hw_bundle_oct_2013**: Boolean.  True iff it seems the system is eligible for current versions of iMovie, GarageBand, Pages, Numbers, and Keynote by virtue of having a hardware bundle license because *system_manufacture_date* indicates it shipped from Apple on or after October 23, 2013. 
 
-*How it Works:*  This script reads the client's hardware serial number, determining a date of manufacture using a method others have discovered and disclosed<sup>3</sup>.  If the date of manufacture is on or after October 23, 2013, then it considers the computer eligible for the current iLife/iWork hardware bundle.
+*How it Works:*  This script reads the client's hardware serial number using *systemprofiler*, determining a date of manufacture using a method others have discovered and disclosed<sup>3</sup>.  If the date of manufacture is on or after October 23, 2013, then it considers the computer eligible for the current iLife/iWork hardware bundle.
 
 Conditional Manifest Example
 ----------
-Per the munki documentation and online examples<sup>1,2</sup>, optional installs, mandatory installs, etc. can be offered conditionally.  For example, Apple iMovie, GarageBand, Pages, Numbers, and Keynote are offered conditionally in the _includes/software-common-optional_installs_ manifest:<pre>
+Per the Munki documentation and online examples<sup>1,2</sup>, optional installs, mandatory installs, etc. can be offered conditionally.
+
+You can use this **hw-bundle.py** Munki condition to conditionally offer Apple iMovie, GarageBand, Pages, Numbers, and Keynote if **system_hw_bundle_oct_2013** is true.  Here is an example block for placement in a group or upper-level included manifest:<pre>
 	&lt;key>conditional_items&lt;/key>
 	&lt;array&gt;
 		&lt;dict&gt;
