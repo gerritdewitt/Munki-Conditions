@@ -14,7 +14,7 @@ Admin Groups Condition (_admin-groups.py_)
 
 Expected Input Data
 ----------
-A list of names for directory-based user groups may be defined in a relevant manifest's __metadata_ dictionary:
+A list of names for directory-based user groups may be defined in a relevant manifest's *_metadata* dictionary:
 * *nested_admin_groups*:  an array of strings, where each string is the name of a directory-based group to nest.
 * *exclude_admins_from_dsconfigad*:  optional boolean; if present, admin groups specified in AD binding preferences are not considered to be desired members of the local admin group.
    * This key may be specified in any manifest applicable to the computer; however, if specified in *at least one manifest*, at any level, this setting takes effect.  This allows granular control of the setting down to the computer level.
