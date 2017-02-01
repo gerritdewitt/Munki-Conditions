@@ -10,7 +10,7 @@ In addition to the Munki Conditions being deployed...
 
 Expected Input Data
 ----------
-Details for each print queue are expected to be defined using this structure in each manifest's __metadata_ dictionary:
+Details for each print queue are expected to be defined using this structure in each manifest's *_metadata* dictionary:
 * *print_queues*:  an array of dictionaries, where each dictionary contains these keys to describe the print queue:
     * *name* (string, required): A name for the CUPS print queue.  Cannot have spaces.  Also used for the display name.
     * *ppd_path* (string, required): The path to the PPD file for the queue as it is (or would be) installed on the client's filesystem.
