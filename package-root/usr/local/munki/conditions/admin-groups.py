@@ -20,8 +20,7 @@ MUNKI_MANIFESTS_PATH = "/Library/Managed Installs/manifests"
 # Directory node from which we reference groups to nest.
 # Node path is what dscl reports.
 global DIRECTORY_SEARCH_NODE
-# Edit to meet your needs:
-DIRECTORY_SEARCH_NODE = "/Active Directory/YOUR_DOMAIN/All Domains"
+DIRECTORY_SEARCH_NODE = "/Active Directory/YOURDOMAIN/All Domains"
 
 import sys, plistlib, xml, subprocess, os, logging
 this_dir = os.path.dirname(os.path.realpath(__file__))
