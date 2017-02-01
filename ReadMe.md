@@ -38,7 +38,7 @@ exit
 # Update catalogs:
 sudo makecatalogs
 # Add to manifest:
-sudo manifestutil add-pkg GSU_Munki_Conditions --section managed_installs --manifest includes/conditions
+sudo manifestutil add-pkg Munki_Conditions --section managed_installs --manifest includes/conditions
 </pre>
 
 Author
