@@ -11,7 +11,7 @@
 # Written by Gerrit DeWitt (gdewitt@gsu.edu)
 # This file created 2015-08-25 (extensions), 2015-09-11 (initial installcheck scripts for bundle eligibility)
 # 2015-11-10 (extensions), 2015-11-24 (extensions/conditions), 2016-02-16, 2016-06-15, 2016-06-27
-# 2017-01-13.
+# 2017-01-13, 2017-02-20.
 # Copyright Georgia State University.
 # This script uses publicly-documented methods known to those skilled in the art.
 
@@ -44,32 +44,32 @@ def dscl_lookup_computer_record(given_forest,given_domain,given_computer_account
         if t > 5:
             break
         # Call dscl:
-        output_array = []
+        output_dict = {}
         try:
             output = subprocess.check_output(['/usr/bin/dscl',
+                                              '-plist',
                                               '/Search',
                                               'read',
                                               'Computers/%s' % given_computer_account])
         except subprocess.CalledProcessError:
             output = ''
         if output:
-            output_array = output.replace(':\n','\n').replace(': \n','\n').replace(': ','\n').split('\n')
-        if output_array:
+            output_dict = plistlib.readPlistFromString(output)
+        if output_dict:
             break
         # Sleep and try again if no output:
-        time.sleep(10)
+        time.sleep(5)
         t += 1
     # Parse output:
     try:
-        i = output_array.index('AppleMetaNodeLocation')
-    except ValueError:
-        i = -1
-    if i >= 0:
-        try:
-            if given_forest.lower() in output_array[i+1].lower() or given_domain.lower() in output_array[i+1].lower():
-                record_in_domain_or_forest = True
-        except IndexError:
-            pass
+        meta_node_attr = output_dict['dsAttrTypeStandard:AppleMetaNodeLocation']
+    except KeyError:
+        meta_node_attr = []
+    for m in meta_node_attr:
+        if given_forest.lower() in m.lower():
+            record_in_domain_or_forest = True
+        if given_domain.lower() in m.lower():
+            record_in_domain_or_forest = True
     # Return:
     return record_in_domain_or_forest
 
