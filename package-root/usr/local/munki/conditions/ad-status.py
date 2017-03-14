@@ -11,7 +11,7 @@
 # Written by Gerrit DeWitt (gdewitt@gsu.edu)
 # This file created 2015-08-25 (extensions), 2015-09-11 (initial installcheck scripts for bundle eligibility)
 # 2015-11-10 (extensions), 2015-11-24 (extensions/conditions), 2016-02-16, 2016-06-15, 2016-06-27
-# 2017-01-13, 2017-02-20.
+# 2017-01-13, 2017-02-20, 2017-03-08,10.
 # Copyright Georgia State University.
 # This script uses publicly-documented methods known to those skilled in the art.
 
@@ -19,14 +19,50 @@
 global AD_FOREST, AD_DOMAIN
 AD_FOREST = "example.org"
 AD_DOMAIN = "domain.example.org"
+global AD_TESTS_MAX_TRIES
+AD_TESTS_MAX_TRIES = int(2)
+global AD_MAX_CONSECUTIVE_FAILURES
+AD_MAX_CONSECUTIVE_FAILURES = int(2)
+
 global DEPENDENT_CONFIG_PROFILE_IDENTIFIERS
 DEPENDENT_CONFIG_PROFILE_IDENTIFIERS = ["org.sample.config.profile.active-directory","org.sample.config.profile.8021X"]
+global NTP_SERVER
+NTP_SERVER = "ntp.example.org"
 
-import sys, plistlib, xml, subprocess, os, logging, time
+global AD_FAILURES_HISTORY_FILE_PATH
+AD_FAILURES_HISTORY_FILE_PATH = "/Library/Managed Installs/ActiveDirectoryFailures.plist"
+
+
+import sys, plistlib, xml, subprocess, os, logging, time, datetime
 this_dir = os.path.dirname(os.path.realpath(__file__))
 shared_support_dir = os.path.join(this_dir,'shared-support')
 sys.path.append(shared_support_dir)
 import conditions_common
+
+def macos_ntpdate(given_ntp_server):
+    '''Calls ntpdate and attempts to update the system clock.
+        Returns true if successful, false otherwise.'''
+    try:
+        subprocess.check_call(['/usr/sbin/ntpdate',
+                                          '-u',
+                                          given_ntp_server])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def remove_sys_keychain_override():
+    '''Attempts to remove the DefaultKeychain key from
+        /Library/Preferences/com.apple.security.plist.
+        Using defaults here since the plist may be a binplist.'''
+    plist_path = "/Library/Preferences/com.apple.security.plist"
+    try:
+        subprocess.check_call(['/usr/bin/defaults',
+                               'delete',
+                               plist_path,
+                               'DefaultKeychain'])
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 def dscl_lookup_computer_record(given_forest,given_domain,given_computer_account):
     '''Looks up the given computer account using dscl to test communication
@@ -39,10 +75,9 @@ def dscl_lookup_computer_record(given_forest,given_domain,given_computer_account
     # Defaults:
     record_in_domain_or_forest = False
     # Loop:
-    t = 1
-    while True:
-        if t > 5:
-            break
+    t = 0
+    while t < 5:
+        t += 1
         # Call dscl:
         output_dict = {}
         try:
@@ -59,7 +94,7 @@ def dscl_lookup_computer_record(given_forest,given_domain,given_computer_account
             break
         # Sleep and try again if no output:
         time.sleep(5)
-        t += 1
+
     # Parse output:
     try:
         meta_node_attr = output_dict['dsAttrTypeStandard:AppleMetaNodeLocation']
@@ -126,10 +161,9 @@ def dig_lookup_dns_srv(given_forest,given_domain):
     # Defaults:
     ad_gc_available = False
     # Loop:
-    t = 1
-    while True:
-        if t > 5:
-            break
+    t = 0
+    while (not ad_gc_available) and (t < 5):
+        t += 1
         output_array = []
         answer_section_index = -1
         # Call dig:
@@ -159,47 +193,124 @@ def dig_lookup_dns_srv(given_forest,given_domain):
                     break
                 if ';' in output_array[i]: # new section; ignore from here
                     break
-        # Sleep and try again if no output:
-        t += 1
+        # Sleep:
         time.sleep(5)
     # Return:
     return ad_gc_available
+
+def increment_dscl_failure_count():
+    '''Sets or increments a counter and timestamp to track
+        Active Directory communications errors.
+        Returns a failure count (of at least 1).'''
+    # Defaults:
+    dscl_failures_dict = {"failure_count":0,
+                        "failure_timestamps":[]}
+    read_dscl_failures_dict = {}
+    # Try to read existing failure data:
+    if os.path.exists(AD_FAILURES_HISTORY_FILE_PATH):
+        try:
+            read_dscl_failures_dict = plistlib.readPlist(AD_FAILURES_HISTORY_FILE_PATH)
+        except xml.parsers.expat.ExpatError:
+            pass
+    dscl_failures_dict.update(read_dscl_failures_dict)
+    # Note this failure:
+    dscl_failures_dict['failure_count'] += 1
+    dscl_failures_dict['failure_timestamps'].append(datetime.datetime.utcnow())
+    # Write failure data:
+    try:
+        plistlib.writePlist(dscl_failures_dict,AD_FAILURES_HISTORY_FILE_PATH)
+    except TypeError:
+        logging.error("Failed to write AD failure history to: %s" % AD_FAILURES_HISTORY_FILE_PATH)
+    except IOError:
+        logging.error("Failed to write AD failure history to: %s" % AD_FAILURES_HISTORY_FILE_PATH)
+    # Return failure count:
+    return dscl_failures_dict['failure_count']
+
+def remove_dscl_failure_data():
+    '''Removes the file tracking AD connectivity failures.'''
+    # Try to read existing failure data:
+    if os.path.exists(AD_FAILURES_HISTORY_FILE_PATH):
+        try:
+            os.unlink(AD_FAILURES_HISTORY_FILE_PATH)
+        except IOError:
+            logging.error("Failed to remove AD failure history: %s" % AD_FAILURES_HISTORY_FILE_PATH)
 
 def main():
     '''Main logic for this script'''
     # Assume not on network unless we prove otherwise.
     ad_status = "not-on-network"
+    # Assume failure count is zero unless we prove otherwise.
+    dscl_failure_count = 0
+    # Assume dscl lookup is false unless network and dsconfigad tests pass:
+    ad_dscl_tests_pass = False
 
     # Network test:
     logging.info('Looking for DNS-SRV records...')
-    ad_dns_srv_found = dig_lookup_dns_srv(AD_FOREST,AD_DOMAIN)
+    on_network = dig_lookup_dns_srv(AD_FOREST,AD_DOMAIN)
     # Basic info from macOS:
     logging.info('Getting information from dsconfigad...')
     dsconfigad_computer_record = dsconfigad_get_computer_record(AD_FOREST,AD_DOMAIN)
-    # Connectivity test should be false unless we determine the test is necessary:
-    dscl_lookup_result = False
     
-    # If on network, assume unbound unless we prove otherwise.
-    if ad_dns_srv_found:
-        logging.info('On network: DNS-SRV records found.')
-        ad_status = "on-network-unbound"
-    # If on network and macOS thinks it is bound, test for connectivity.
-    if ad_dns_srv_found and dsconfigad_computer_record:
-        logging.info('dsconfigad indicates system bound using %s' % dsconfigad_computer_record)
-        dscl_lookup_result = dscl_lookup_computer_record(AD_FOREST,AD_DOMAIN,dsconfigad_computer_record)
-        if dscl_lookup_result:
-            ad_status = "on-network-communicating"
+    # On-network tests loop:
+    # Condition necessity and sufficiency Venn Diagram:
+    # ( not dsconfigad_computer_record          )( dsconfigad_computer_record )
+    # ( not ad_dscl_tests_pass                          )( ad_dscl_tests_pass )
+    t = 0
+    while on_network and (t < AD_TESTS_MAX_TRIES) and (ad_status != "on-network-communicating"):
+        # Counter:
+        t += 1
+        logging.info('On network: DNS-SRV records found.  Performing other tests...')
+        # First: If on network and macOS thinks it is bound, test for connectivity using dscl:
+        if dsconfigad_computer_record:
+            logging.info('dsconfigad indicates system bound using %s' % dsconfigad_computer_record)
+            logging.info('Testing connectivity using dscl...')
+            ad_dscl_tests_pass = dscl_lookup_computer_record(AD_FOREST,AD_DOMAIN,dsconfigad_computer_record)
+            if ad_dscl_tests_pass:
+                ad_status = "on-network-communicating"
+                logging.info('The dscl tests passed.')
+                # If bound, remove failure count information (if present):
+                remove_dscl_failure_data()
 
-    # If unbound, clear out any data in Munki so that profiles
-    # for binding may be reinstalled:
+        # If on network but dscl tests fail:
+        if not ad_dscl_tests_pass: # dsconfigad could go either way
+            ad_status = "on-network-unbound"
+            logging.error('The dscl tests failed or dsconfigad indicates unbound!')
+
+        # Special subset of dscl tests failing; system thinks it's bound, so
+        # try a couple of things that might correct a transitory communications error.
+        if not ad_dscl_tests_pass and dsconfigad_computer_record:
+            # 1 - Update system clock.
+            logging.error('Attempting to update system clock...')
+            if not macos_ntpdate(NTP_SERVER):
+                logging.error('...NTP update against %s failed!' % NTP_SERVER)
+            else:
+                logging.error('...NTP update complete.')
+            time.sleep(5)
+            # 2 - Remove DefaultKeychain key from com.apple.security.plist.
+            logging.error('Removing DefaultKeychain key from com.apple.security.plist if necessary...')
+            # This can fix a situation where macOS tries sourcing the computer (trust)
+            # account password from a keychain other than the System.keychain.
+            if not remove_sys_keychain_override():
+                logging.error('...removing DefaultKeychain key failed (perhaps not present).')
+            else:
+                logging.error('...removed DefaultKeychain key.')
+            time.sleep(5)
+            
+    # If unbound, increment the failure count:
     if ad_status == "on-network-unbound":
+        dscl_failure_count = increment_dscl_failure_count()
+
+    # If unbound, and we are past our failure count:
+    # Clear out any data in Munki so that profiles
+    # for binding may be reinstalled:
+    if (ad_status == "on-network-unbound") and (dscl_failure_count >= AD_MAX_CONSECUTIVE_FAILURES):
         for profile_identifier in DEPENDENT_CONFIG_PROFILE_IDENTIFIERS:
             conditions_common.remove_profile(profile_identifier)
 
     # Write Conditions:
-    conditions_common.write_conditions({"ad_dns_srv_found":ad_dns_srv_found,
-                                       "computer_record":dsconfigad_computer_record,
-                                       "dscl_lookup_result":dscl_lookup_result,
+    conditions_common.write_conditions({"ad_on_network":on_network,
+                                       "ad_computer_record":dsconfigad_computer_record,
+                                       "ad_dscl_tests_pass":ad_dscl_tests_pass,
                                        "ad_status":ad_status,
                      })
     # Finish:
