@@ -8,7 +8,7 @@
 # Written by Gerrit DeWitt (gdewitt@gsu.edu)
 # This file created 2015-08-25 (extensions), 2015-09-11 (initial installcheck scripts for bundle eligibility)
 # 2015-11-10 (extensions), 2015-11-24 (extensions/conditions), 2016-02-16, 2016-06-15, 2016-06-28
-# 2017-01-13.
+# 2017-01-13, 2017-03-08.
 # Copyright Georgia State University.
 # This script uses publicly-documented methods known to those skilled in the art.
 
@@ -50,4 +50,6 @@ def write_conditions(given_dict):
         try:
             plistlib.writePlist(conditions_dict,MUNKI_CONDITIONS_PATH)
         except TypeError:
+            logging.error("Failed to write Munki Conditions: %s" % str(given_dict))
+        except IOError:
             logging.error("Failed to write Munki Conditions: %s" % str(given_dict))
