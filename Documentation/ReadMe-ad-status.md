@@ -1,15 +1,22 @@
 Active Directory Status Condition (_ad-status.py_)
 ----------
 *Purpose:* Adds the following keys to the Munki Conditions file to report on connectivity to Active Directory (AD):
-* **ad_dns_srv_found**: Boolean.  True iff AD DNS records for the forest or domain you specified were found.
-* **computer_record**: String.  Name of the computer record as returned by *dsconfigad*; otherwise, blank.
-* **dscl_lookup_result**: Boolean.  True iff *dscl* can communicate with AD to read the computer record and its attributes **and** the *AppleMetaNodeLocation* indicates the domain or forest you specified.
+* **ad_on_network**: Boolean.  True iff AD DNS records for the forest or domain you specified were found.  When true, it should be interpreted as the computer being on the network so AD connectivity tests should be run.
+* **ad_computer_record**: String.  Name of the computer record as returned by *dsconfigad*; otherwise, blank.
+* **ad_dscl_tests_pass**: Boolean.  False by default.  True iff *dscl* can communicate with AD to read the computer record and its attributes **and** the *AppleMetaNodeLocation* indicates the domain or forest you specified.  This test is only run if the computer is on the network and *dsconfigad* produced a computer record name.
 * **ad_status**: String with fixed values:
-   * **not-on-network**: Indicates that the system is *not* on the network because DNS-SRV records weren't found (*ad_dns_srv_found* was False, *computer_record* may or may not provide a computer name, and *dscl_lookup_result* is False because there was no need to test communication off-network).
-   * **on-network-communicating**: Indicates that the system is on the network, is bound to AD, and is communicating with it (*ad_dns_srv_found* was True, *computer_record* provides a computer name, and *dscl_lookup_result* is True).
-   * **on-network-unbound**: Indicates that the system is on the network, but AD communication tests failed (*ad_dns_srv_found* was True, *computer_record* may or may not provide a computer name, but *dscl_lookup_result* is False).
+   * **not-on-network**: Indicates that the system is *not* on the network because DNS-SRV records weren't found (*ad_on_network* is False, *ad_computer_record* may or may not provide a computer name, and *ad_dscl_tests_pass* is False because there is no need to test communication off-network).
+   * **on-network-communicating**: Indicates that the system is on the network, is bound to AD, and is communicating with it (*ad_on_network* is True, *ad_computer_record* provides a computer name, and *ad_dscl_tests_pass* is True).
+   * **on-network-unbound**: Indicates that the system is on the network, but AD communication tests failed (*ad_on_network* is True, *ad_computer_record* may or may not provide a computer name, but *ad_dscl_tests_pass* is False).
 
-*How it Works:*  This script performs a series of tests to determine if the computer on which it runs should be bound to AD.  Lookup of DNS-SRV records is accomplished with *dig*, *dsconfigad* is called to read AD binding defaults, and communications testing is done with *dscl*.
+## How it Works ##
+
+This script performs a series of tests to determine the state of the computer's relationship with AD.  Lookup of DNS-SRV records is accomplished with *dig*, *dsconfigad* is called to read AD binding defaults, and communications testing is done with *dscl*.
+
+In testing for AD connectivity, the main logic employs a while loop.  The script will repeat AD tests a configurable number of times (**AD_TESTS_MAX_TRIES**) while **on_network** is True and **ad_status** is **not** *on-network-communicating*.  During this loop, if dscl indicates the system is bound, the script switches **ad_status** to *on-network-communicating*, the AD failures history file is removed (if possible), and we exit the loop.  Otherwise:
+   - As long as the while loop is active, if the **ad_dscl_tests_pass** is False: The script will attempt to set the system clock (ntpdate against **NTP_SERVER**), and it will attempt to remove the *DefaultKeychain* key from */Library/Preferences/com.apple.security.plist*.  This latter “fix” handles cases where some process may have instructed macOS to consider a keychain other than */Library/Keychains/System.keychain* as the System keychain.  Such a redirection would prevent macOS from being able to look up the computer (trust) account details it needs to communicate with AD.  During this phase, we set **ad_status** to *on-network-unbound* in case the loop breaks.
+   - After the loop exits, if **ad_status** is still *on-network-unbound*, we update an AD failures count history file.
+   - If **ad_status** is *on-network-unbound* and the failures count exceeds the configurable threshold (**AD_MAX_CONSECUTIVE_FAILURES**), the condition script removes the configuration profile used to bind the system to AD.  It may also remove dependent profiles, such as ones with an ADCertificate payload.  The profiles to remove in this case are specified as a list of their identifiers in **DEPENDENT_CONFIG_PROFILE_IDENTIFIERS**.
 
 Relationship with AD Config Profile
 ----------
