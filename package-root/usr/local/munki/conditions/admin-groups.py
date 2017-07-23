@@ -9,7 +9,10 @@
 # (ReadMe.md and those in the Documentation folder).
 
 # Written by Gerrit DeWitt (gdewitt@gsu.edu)
-# This file created 2015-08-25, 2015-09-02 (extensions), 2015-09-11 (initial installcheck scripts for bundle eligibility), 2015-11-10 (extensions), 2015-11-24 (extensions/conditions), 2016-02-16, 2016-02-26, 2016-03-01,02, 2016-06-15.
+# This file created 2015-08-25, 2015-09-02 (extensions)
+# 2015-09-11 (initial installcheck scripts for bundle eligibility), 2015-11-10 (extensions)
+# 2015-11-24 (extensions/conditions), 2016-02-16, 2016-02-26, 2016-03-01,02, 2016-06-15
+# 2017-07-23.
 # Copyright Georgia State University.
 # This script uses publicly-documented methods known to those skilled in the art.
 
@@ -27,59 +30,6 @@ this_dir = os.path.dirname(os.path.realpath(__file__))
 shared_support_dir = os.path.join(this_dir,'shared-support')
 sys.path.append(shared_support_dir)
 import conditions_common
-
-def get_included_manifest_names_from_given_manifest(given_manifest_name):
-    '''Reads the given manifest's included_manifests array.  Returns a list
-        of included ones.'''
-    # Defaults:
-    given_manifest_dict = {}
-    included_manifests_list = []
-    # Try reading input manifest file to dict:
-    given_manifest_path = os.path.join(MUNKI_MANIFESTS_PATH,given_manifest_name)
-    if os.path.exists(given_manifest_path):
-        try:
-            given_manifest_dict = plistlib.readPlist(given_manifest_path)
-        except xml.parsers.expat.ExpatError:
-            pass
-    # Try reading the included_manifests key from the given_manifest_dict:
-    if given_manifest_dict:
-        try:
-            included_manifests_list = given_manifest_dict['included_manifests']
-        except KeyError:
-            pass
-    # Return:
-    return included_manifests_list
-
-def make_list_of_applicable_manifests():
-    '''Produces a flat list of manifests which are relevant to this computer.'''
-    # Defaults:
-    processed_manifest_names_list = []
-    queued_manifest_names_list = ['client_manifest.plist']
-    # Loop:
-    while True:
-        # Init:
-        new_manifests_list = []
-        for manifest_name in queued_manifest_names_list:
-            new_manifests_list_from_this_manifest_name = get_included_manifest_names_from_given_manifest(manifest_name)
-            # This new manifest list can contain duplicates (we filter them when adding to the queue in the next for loop).
-            new_manifests_list.extend(new_manifests_list_from_this_manifest_name)
-            # Mark as processed (but prevent duplicates):
-            if manifest_name not in processed_manifest_names_list:
-                processed_manifest_names_list.append(manifest_name)
-        # Break if new manifests list is empty:
-        if not new_manifests_list:
-            break
-        # Add any new ones to queue:
-        for manifest_name in new_manifests_list:
-            if manifest_name not in queued_manifest_names_list:
-                queued_manifest_names_list.append(manifest_name)
-        # Remove processed manifests from queue:
-        for manifest_name in queued_manifest_names_list:
-            if manifest_name in processed_manifest_names_list:
-                queued_manifest_names_list.remove(manifest_name)
-
-    # Return:
-    return processed_manifest_names_list
 
 def make_list_of_admin_groups(given_manifest_names_list):
     '''Given a list of manifest names, examine their metadata, looking for nested_admin_groups keys.
@@ -280,7 +230,7 @@ def main():
     results_array = [True]
     overall_result = False
     # Get names of group manifests to which this computer is a member:
-    group_manifest_names = make_list_of_applicable_manifests()
+    group_manifest_names = conditions_common.make_list_of_applicable_manifests()
     # Construct list of admin groups that should be present:
     requested_admin_group_dicts_list, exclude_dsconfigad_admin_groups = make_list_of_admin_groups(group_manifest_names)
     # Enumerate existing nested groups:
